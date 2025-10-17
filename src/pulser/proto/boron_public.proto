@@ -1,0 +1,116 @@
+syntax = "proto3";
+package boron.v1;
+
+service Boron {
+  rpc IsReady(IsReadyRequest) returns (IsReadyReply);
+  rpc IsEmulated(IsEmulatedRequest) returns (IsEmulatedReply);
+  rpc GetBoardRevision(GetBoardRevisionRequest) returns (GetBoardRevisionReply);
+  rpc GetState(GetStateRequest) returns (GetStateReply);
+  rpc Reset(ResetRequest) returns (ResetReply);
+
+  rpc ReadBoardTemperature(ReadBoardTemperatureRequest) returns (ReadBoardTemperatureReply);
+
+  rpc SetDcOffset(SetDcOffsetRequest) returns (SetDcOffsetReply);
+  rpc GetDcOffset(GetDcOffsetRequest) returns (GetDcOffsetReply);
+  rpc SetDcOutputCtrl(SetDcOutputCtrlRequest) returns (SetDcOutputCtrlReply);
+  rpc GetDcOutputCtrl(GetDcOutputCtrlRequest) returns (GetDcOutputCtrlReply);
+
+  rpc ListenToStateEvent(ListenToStateEventRequest) returns (stream StateEvent);  // Returns an open-ended stream.
+}
+
+message IsReadyRequest {
+}
+
+message IsReadyReply {
+}
+
+message IsEmulatedRequest {
+}
+
+message IsEmulatedReply {
+  bool emulated = 1;
+}
+
+message GetBoardRevisionRequest {
+}
+
+message GetBoardRevisionReply {
+  string revision = 1;
+}
+
+message GetStateRequest {
+}
+
+message GetStateReply {
+  double offset_v = 1;
+  bool dc_output_en = 2;
+}
+
+message ResetRequest{
+}
+
+message ResetReply {
+}
+
+message ReadBoardTemperatureRequest {
+}
+
+message ReadBoardTemperatureReply {
+  double temperature = 1;
+}
+
+message SetDcOffsetRequest {
+  double offset_v = 1;
+}
+
+message SetDcOffsetReply {
+}
+
+message GetDcOffsetRequest {
+}
+
+message GetDcOffsetReply {
+  double offset_v = 1;
+}
+
+message SetDcOutputCtrlRequest {
+  bool enable = 1;
+}
+
+message SetDcOutputCtrlReply {
+}
+
+message GetDcOutputCtrlRequest {
+}
+
+message GetDcOutputCtrlReply {
+  bool enable = 1;
+}
+
+message ListenToStateEventRequest {
+}
+
+message StateEvent {
+  StateEventType state_event_type = 1;
+  optional string trigger_req_id = 2;  // Note, this will be filled with the value corresponding to the metadata key "req_id" if it existed in the triggering request.
+}
+
+enum LocalErrorCode {
+  LOCAL_ERROR_CODE_UNSPECIFIED = 0;
+  LOCAL_ERROR_CODE_NOT_SUPPORTED = 103;
+  LOCAL_ERROR_CODE_INVALID_CALIBRATION_DATA = 108;
+}
+
+enum MinMaxConstant {
+  // Enums are represented as int and can only store integers, in addition, in some languages such as c++, the largest number 
+  // which can be stored for an enum is 2147483647. This is less than what is required for 3GHz.
+  // As a workaround use Kilo, Mega and Giga where needed.
+  //option allow_alias = true;
+  MIN_MAX_CONSTANT_UNSPECIFIED = 0;
+  MIN_MAX_CONSTANT_MIN_DC_OFFSET_VOLTS = -5;
+  MIN_MAX_CONSTANT_MAX_DC_OFFSET_VOLTS = 5;
+}
+
+enum StateEventType {
+  STATE_EVENT_TYPE_UNSPECIFIED = 0;
+}

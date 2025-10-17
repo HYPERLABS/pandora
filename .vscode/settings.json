@@ -1,0 +1,7 @@
+{
+	"scm.diffDecorations": "overview",
+	//"python.defaultInterpreterPath": "src/pulser/python/.venv/bin/python3"
+	//"python.defaultInterpreterPath": "src\\pulser\\python\\.venv\\Scripts\\python.exe"
+	//"python.defaultInterpreterPath": "src/mtdr/python/.venv/bin/python3"
+	"python.defaultInterpreterPath": "src\\mtdr\\python\\.venv\\Scripts\\python.exe"
+}

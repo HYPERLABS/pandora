@@ -1,0 +1,120 @@
+syntax = "proto3";
+package carbon.v1;
+import "google/protobuf/duration.proto";
+
+service Carbon {
+  rpc IsReady(IsReadyRequest) returns (IsReadyReply);
+  rpc GetBoardRevision(GetBoardRevisionRequest) returns (GetBoardRevisionReply);
+  rpc Reset(ResetRequest) returns (ResetReply);
+  rpc GetVersionId(GetVersionIdRequest) returns (GetVersionIdReply);
+  rpc Quit(QuitRequest) returns (QuitReply);
+  rpc LoginManage(LoginManageRequest) returns (LoginManageReply);
+  rpc EndSession(EndSessionRequest) returns (EndSessionReply);
+  rpc CancelEndSession(CancelEndSessionRequest) returns (CancelEndSessionReply);
+  rpc ListenToEndSessionEvent(ListenToEndSessionEventRequest) returns (stream EndSessionEvent);  // Returns an open-ended stream. Once an end session dialog appears (or cancelled) a message containing the delay to the end session (or indicating the request has been cancelled) will be sent.
+  rpc ListenToIoExpanderInputEvent(ListenToIoExpanderInputEventRequest) returns (stream IoExpanderInputEvent);  // Returns an open-ended stream that indicates that the input pins set in pin_mask on the io expander given by alias have changed state to the given pin_state.
+  rpc ListenToHealthMonitorEvent(ListenToHealthMonitorEventRequest) returns (stream HealthMonitorEvent);  // Returns an open-ended stream.
+}
+
+message IsReadyRequest {
+}
+
+message IsReadyReply {
+}
+
+message GetBoardRevisionRequest {
+}
+
+message GetBoardRevisionReply {
+  string revision = 1;
+}
+
+message ResetRequest{
+}
+
+message ResetReply {
+}
+
+message GetVersionIdRequest {
+  SysTgt sys_tgt = 1;
+}
+
+message GetVersionIdReply {
+  SysTgt sys_tgt = 1;
+  uint32 major = 2;
+  uint32 minor = 3;
+  uint32 patch = 4;
+  uint32 reserved = 5;
+}
+
+message QuitRequest {
+}
+
+message QuitReply {
+}
+
+message LoginManageRequest{
+  LoginManageMethod method = 1;
+}
+
+message LoginManageReply {
+}
+
+message EndSessionRequest {
+}
+
+message EndSessionReply {
+}
+
+message CancelEndSessionRequest {
+}
+
+message CancelEndSessionReply {
+}
+
+message ListenToEndSessionEventRequest {
+}
+
+message EndSessionEvent {
+  optional bool cancelled = 1;
+  optional google.protobuf.Duration delay = 2;
+}
+
+message ListenToIoExpanderInputEventRequest {
+}
+
+message IoExpanderInputEvent {
+  IoExpanderAlias alias = 1;
+  uint32 pin_mask = 2;
+  uint32 pin_state = 3;
+}
+
+message ListenToHealthMonitorEventRequest {
+}
+
+message HealthMonitorEvent {
+  uint32 alive_time = 1;
+  float rail_12v_current = 2;
+  bool fpga_power_good = 3;
+  bool fpga_done = 4;
+  uint32 board_revision = 5;
+  float cpu_temperature = 6;
+}
+
+enum SysTgt {
+  SYS_TGT_UNSPECIFIED = 0;
+  SYS_TGT_PMP = 1;
+  SYS_TGT_FPGA = 2;
+  SYS_TGT_SELF = 3;
+}
+
+enum LoginManageMethod {
+  Login_Manage_Method_Power_Off = 0;
+  Login_Manage_Method_Reboot = 1;
+}
+
+enum IoExpanderAlias {
+  IO_EXPANDER_ALIAS_UNSPECIFIED = 0;
+  IO_EXPANDER_ALIAS_EXPANSION_USB_REDRIVERS = 1;
+  IO_EXPANDER_ALIAS_EXPANSION_GPIO = 2;
+}

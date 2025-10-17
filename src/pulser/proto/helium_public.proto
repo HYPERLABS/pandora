@@ -1,0 +1,397 @@
+syntax = "proto3";
+package helium.v1;
+
+service Helium {
+  rpc IsReady(IsReadyRequest) returns (IsReadyReply);
+  rpc IsEmulated(IsEmulatedRequest) returns (IsEmulatedReply);
+  rpc GetBoardRevision(GetBoardRevisionRequest) returns (GetBoardRevisionReply);
+  rpc GetState(GetStateRequest) returns (GetStateReply);
+  rpc Reset(ResetRequest) returns (ResetReply);
+
+  rpc ReadBoardTemperature(ReadBoardTemperatureRequest) returns (ReadBoardTemperatureReply);
+
+  rpc SelectSrcClk(SelectSrcClkRequest) returns (SelectSrcClkReply);
+  rpc GetSrcClk(GetSrcClkRequest) returns (GetSrcClkReply);
+  rpc GetSrcClkFrequency(GetSrcClkFrequencyRequest) returns (GetSrcClkFrequencyReply);
+  rpc SetInternalSrcClkFrequency(SetInternalSrcClkFrequencyRequest) returns (SetInternalSrcClkFrequencyReply);
+
+  rpc SetPfnInputDivider(SetPfnInputDividerRequest) returns (SetPfnInputDividerReply);
+  rpc GetPfnInputDivider(GetPfnInputDividerRequest) returns (GetPfnInputDividerReply);
+  rpc SetPfnInternalDivider(SetPfnInternalDividerRequest) returns (SetPfnInternalDividerReply);
+  rpc GetPfnInternalDivider(GetPfnInternalDividerRequest) returns (GetPfnInternalDividerReply);
+  rpc GetPfnTotalDivider(GetPfnTotalDividerRequest) returns (GetPfnTotalDividerReply);
+
+  rpc GetCfgForNonGatedPulseFrequencyBasedOnInternalSrcClk(GetCfgForNonGatedPulseFrequencyBasedOnInternalSrcClkRequest) returns (GetCfgForNonGatedPulseFrequencyBasedOnInternalSrcClkReply);
+  rpc SetNonGatedPulseFrequencyBasedOnInternalSrcClk(SetNonGatedPulseFrequencyBasedOnInternalSrcClkRequest) returns (SetNonGatedPulseFrequencyBasedOnInternalSrcClkReply);
+  rpc GetNonGatedPulseFrequency(GetNonGatedPulseFrequencyRequest) returns (GetNonGatedPulseFrequencyReply);
+  rpc Align(AlignRequest) returns (AlignReply);
+  rpc IsAligned(IsAlignedRequest) returns (IsAlignedReply);
+  rpc SetPulseWidth(SetPulseWidthRequest) returns (SetPulseWidthReply);
+  rpc GetPulseWidth(GetPulseWidthRequest) returns (GetPulseWidthReply);
+  rpc SetPulseWidthAdjustMode(SetPulseWidthAdjustModeRequest) returns (SetPulseWidthAdjustModeReply);
+  rpc GetPulseWidthAdjustMode(GetPulseWidthAdjustModeRequest) returns (GetPulseWidthAdjustModeReply);
+  rpc ResetPfn(ResetPfnRequest) returns (ResetPfnReply);
+
+  rpc GateCtrl(GateCtrlRequest) returns (GateCtrlReply);
+  rpc GetGateCtrl(GetGateCtrlRequest) returns (GetGateCtrlReply);
+  rpc IsGateAligned(IsGateAlignedRequest) returns (IsGateAlignedReply);
+
+  rpc SetOutputCtrl(SetOutputCtrlRequest) returns (SetOutputCtrlReply);
+  rpc GetOutputCtrl(GetOutputCtrlRequest) returns (GetOutputCtrlReply);
+  rpc SetClkOutDivider(SetClkOutDividerRequest) returns (SetClkOutDividerReply);
+  rpc GetClkOutDivider(GetClkOutDividerRequest) returns (GetClkOutDividerReply);
+
+  rpc ListenToStateEvent(ListenToStateEventRequest) returns (stream StateEvent);  // Returns an open-ended stream, a state event will be triggered for any method that change the state.
+  rpc ListenToRefClkInEvent(ListenToRefClkInEventRequest) returns (stream RefClkInEvent);  // Returns an open-ended stream.
+}
+
+message IsReadyRequest {
+}
+
+message IsReadyReply {
+}
+
+message IsEmulatedRequest {
+}
+
+message IsEmulatedReply {
+  bool emulated = 1;
+}
+
+message GetBoardRevisionRequest {
+}
+
+message GetBoardRevisionReply {
+  string revision = 1;
+}
+
+message GetStateRequest {
+}
+
+message GetStateReply {
+  SrcClk src_clk = 1;
+  bool configuration_valid = 2;
+  optional double src_clk_freq_hz = 3;
+  uint32 pfn_input_divider = 4;
+  optional uint32 pfn_internal_divider = 5;
+  uint32 pfn_total_divider = 6;
+  optional double non_gated_pulse_freq_hz = 7;
+  bool aligned = 8;
+  optional double pulse_width_time_sec = 9;
+  optional double pulse_width_duty_cycle = 10;
+  optional double pulse_width_min_time_sec = 11;
+  optional double pulse_width_min_duty_cycle = 12;
+  optional double pulse_width_max_time_sec = 13;
+  optional double pulse_width_max_duty_cycle = 14;
+  optional double pulse_width_adjust_res_sec = 15;
+  optional double pulse_width_adjust_res_duty_cycle = 16;
+  PulseWidthAdjustMode pulse_width_adjust_mode = 17;
+  optional GateType gate_type = 18;
+  optional uint64 gate_pass = 19;
+  optional uint64 gate_block = 20;
+  bool gate_aligned = 21;
+  bool output_en = 22;
+  optional double clk_out_freq_hz = 23;
+  uint32 clk_out_divider = 24;
+  bool pulse_sequence_running = 25;
+}
+
+message ResetRequest{
+}
+
+message ResetReply {
+}
+
+message ReadBoardTemperatureRequest {
+}
+
+message ReadBoardTemperatureReply {
+  double temperature = 1;
+}
+
+message SelectSrcClkRequest {
+  SrcClk src_clk = 1;
+}
+
+message SelectSrcClkReply {
+}
+
+message GetSrcClkRequest {
+}
+
+message GetSrcClkReply {
+  SrcClk src_clk = 1;
+}
+
+message GetSrcClkFrequencyRequest {
+  bool force_measure = 1;
+  bool allow_measure = 2;
+}
+
+message GetSrcClkFrequencyReply {
+  optional double freq_hz = 1;
+}
+
+message SetInternalSrcClkFrequencyRequest {
+  double freq_hz = 1;
+}
+
+message SetInternalSrcClkFrequencyReply {
+}
+
+message SetPfnInputDividerRequest {
+  uint32 divider = 1;
+}
+
+message SetPfnInputDividerReply {
+}
+
+message GetPfnInputDividerRequest {
+}
+
+message GetPfnInputDividerReply {
+  uint32 divider = 1;
+}
+
+message SetPfnInternalDividerRequest {
+  uint32 divider = 1;
+}
+
+message SetPfnInternalDividerReply {
+}
+
+message GetPfnInternalDividerRequest {
+}
+
+message GetPfnInternalDividerReply {
+  uint32 divider = 1;
+}
+
+message GetPfnTotalDividerRequest {
+}
+
+message GetPfnTotalDividerReply {
+  uint32 divider = 1;
+}
+
+message GetCfgForNonGatedPulseFrequencyBasedOnInternalSrcClkRequest {
+  double freq_hz = 1;
+}
+
+message GetCfgForNonGatedPulseFrequencyBasedOnInternalSrcClkReply {
+  double int_src_clk_freq_hz = 1;
+  uint32 pfn_input_divider = 2;
+  uint32 pfn_internal_divider = 3;
+}
+
+message SetNonGatedPulseFrequencyBasedOnInternalSrcClkRequest {
+  double freq_hz = 1;
+}
+
+message SetNonGatedPulseFrequencyBasedOnInternalSrcClkReply {
+}
+
+message GetNonGatedPulseFrequencyRequest {
+}
+
+message GetNonGatedPulseFrequencyReply {
+  double freq_hz = 1;
+}
+
+message AlignRequest {
+}
+
+message AlignReply {
+}
+
+message IsAlignedRequest {
+}
+
+message IsAlignedReply {
+  bool aligned = 1;
+}
+
+message SetPulseWidthRequest {
+  oneof value {
+    double width_sec = 1;
+    double width_duty_cycle_percent = 2;
+  }
+}
+
+message SetPulseWidthReply {
+}
+
+message GetPulseWidthRequest {
+  optional PulseWidthAdjustAttribute attribute = 1;
+}
+
+message GetPulseWidthReply {
+  optional PulseWidthAdjustAttribute attribute = 1;
+  double width_sec = 2;
+  double width_duty_cycle_percent = 3;
+}
+
+message SetPulseWidthAdjustModeRequest {
+  PulseWidthAdjustMode mode = 1;
+}
+
+message SetPulseWidthAdjustModeReply {
+}
+
+message GetPulseWidthAdjustModeRequest {
+}
+
+message GetPulseWidthAdjustModeReply {
+  PulseWidthAdjustMode mode = 1;
+}
+
+message ResetPfnRequest {
+}
+
+message ResetPfnReply {
+}
+
+message GateCtrlRequest {
+  GateType gate_type = 1;
+  optional uint64 gate_pass = 2;
+  optional uint64 gate_block = 3;
+}
+
+message GateCtrlReply {
+}
+
+message GetGateCtrlRequest {
+}
+
+message GetGateCtrlReply {
+  GateType gate_type = 1;
+  optional uint64 gate_pass = 2;
+  optional uint64 gate_block = 3;
+}
+
+message IsGateAlignedRequest {
+}
+
+message IsGateAlignedReply {
+  bool aligned = 1;
+}
+
+message SetOutputCtrlRequest {
+  bool enable = 1;
+}
+
+message SetOutputCtrlReply {
+}
+
+message GetOutputCtrlRequest {
+}
+
+message GetOutputCtrlReply {
+  bool enable = 1;
+}
+
+message SetClkOutDividerRequest {
+  uint32 divider = 1;
+}
+
+message SetClkOutDividerReply {
+}
+
+message GetClkOutDividerRequest {
+}
+
+message GetClkOutDividerReply {
+  uint32 divider = 1;
+}
+
+message ListenToStateEventRequest {
+}
+
+message StateEvent {
+  StateEventType state_event_type = 1;
+  optional string trigger_req_id = 2;  // Note, this will be filled with the value corresponding to the metadata key "req_id" if it existed in the triggering request.
+}
+
+message ListenToRefClkInEventRequest {
+}
+
+message RefClkInEvent {
+  ClkEvt clk_evt = 1;
+}
+
+enum LocalErrorCode {
+  LOCAL_ERROR_CODE_UNSPECIFIED = 0;
+  LOCAL_ERROR_CODE_SRC_CLK_OUT_OF_RANGE = 101;
+  LOCAL_ERROR_CODE_NON_OPTIMAL_ALIGNMENT = 102;
+  LOCAL_ERROR_CODE_NOT_SUPPORTED = 103;
+  LOCAL_ERROR_CODE_POWER_GOOD_PROBLEM = 104;
+  LOCAL_ERROR_CODE_PD_MINIMIZATION_FAILED = 105;
+  LOCAL_ERROR_CODE_SRC_CLK_NOT_VALID = 106;
+  LOCAL_ERROR_CODE_ALIGNMENT_REQUIRED = 107;
+  LOCAL_ERROR_CODE_INVALID_CALIBRATION_DATA = 108;
+  LOCAL_ERROR_CODE_ALIGNMENT_FAILED = 109;
+  LOCAL_ERROR_CODE_INVALID_CONFIGURATION = 110;
+  LOCAL_ERROR_CODE_OUT_OF_CALIBRATION_DATA_RANGE = 111;
+  LOCAL_ERROR_CODE_FREQUENCY_UNKNOWN = 112;
+}
+
+enum MinMaxConstant {
+  // Enums are represented as int and can only store integers, in addition, in some languages such as c++, the largest number 
+  // which can be stored for an enum is 2147483647. This is less than what is required for 3GHz.
+  // As a workaround use Kilo, Mega and Giga where needed.
+  option allow_alias = true;
+  MIN_MAX_CONSTANT_UNSPECIFIED = 0;
+  MIN_MAX_CONSTANT_MIN_INTERNAL_SRC_CLK_FREQ_KHZ = 312500;
+  MIN_MAX_CONSTANT_MAX_INTERNAL_SRC_CLK_FREQ_KHZ = 3000000;
+  MIN_MAX_CONSTANT_MIN_UNSUPPORTED_INTERNAL_SRC_CLK_FREQ_KHZ = 2624444;
+  MIN_MAX_CONSTANT_MAX_UNSUPPORTED_INTERNAL_SRC_CLK_FREQ_KHZ = 2700000;
+  MIN_MAX_CONSTANT_MIN_EXTERNAL_SRC_CLK_FREQ_MHZ = 25;
+  MIN_MAX_CONSTANT_MAX_EXTERNAL_SRC_CLK_FREQ_MHZ = 3000;
+  MIN_MAX_CONSTANT_MIN_PFN_INPUT_DIVIDER = 1;
+  MIN_MAX_CONSTANT_MAX_PFN_INPUT_DIVIDER = 2048;
+  MIN_MAX_CONSTANT_MIN_PFN_INTERNAL_DIVIDER = 1;
+  MIN_MAX_CONSTANT_MAX_PFN_INTERNAL_DIVIDER = 32;
+  MIN_MAX_CONSTANT_MAX_PULSE_FREQ_GHZ_INTERNAL_SRC_CLK_GHZ = 3;
+  MIN_MAX_CONSTANT_MAX_PULSE_FREQ_GHZ_EXTERNAL_SRC_CLK_GHZ = 3;
+  MIN_MAX_CONSTANT_MAX_PULSE_FREQ_MHZ_FOR_WIDTH_ADJUSTMENT = 625;
+}
+
+enum StateEventType {
+  STATE_EVENT_TYPE_UNSPECIFIED = 0;
+  STATE_EVENT_TYPE_GATE = 1;
+}
+
+enum ClkEvt {
+  CLK_EVT_UNSPECIFIED = 0;
+  CLK_EVT_GLITCH = 1;
+  CLK_EVT_UNDER_RUN = 2;
+  CLK_EVT_OVER_RUN = 3;
+  CLK_EVT_STOP = 4;
+}
+
+enum SrcClk {
+  SRC_CLK_UNSPECIFIED = 0;
+  SRC_CLK_INTERNAL = 1;
+  SRC_CLK_EXTERNAL = 2;
+}
+
+enum PulseWidthAdjustAttribute {
+  PULSE_WIDTH_ADJUST_ATTRIBUTE_UNSPECIFIED = 0;
+  PULSE_WIDTH_ADJUST_ATTRIBUTE_MIN = 1;
+  PULSE_WIDTH_ADJUST_ATTRIBUTE_MAX = 2;
+  PULSE_WIDTH_ADJUST_ATTRIBUTE_RES = 3;
+}
+
+enum PulseWidthAdjustMode {
+  PULSE_WIDTH_ADJUST_MODE_UNSPECIFIED = 0;
+  PULSE_WIDTH_ADJUST_MODE_HIGH_RES = 1;
+  PULSE_WIDTH_ADJUST_MODE_LOW_RES = 2;
+}
+
+enum GateType {
+  GATE_TYPE_UNSPECIFIED = 0;
+  GATE_TYPE_PASS_ALL = 1;
+  GATE_TYPE_BLOCK_ALL = 2;
+  GATE_TYPE_SINGLE_SHOT = 3;
+  GATE_TYPE_PERIODIC = 4;
+}

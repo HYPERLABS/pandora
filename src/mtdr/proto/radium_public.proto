@@ -1,0 +1,209 @@
+syntax = "proto3";
+package radium.v1;
+
+service Radium {
+  rpc IsReady(IsReadyRequest) returns (IsReadyReply);
+  rpc IsEmulated(IsEmulatedRequest) returns (IsEmulatedReply);
+  rpc GetBoardRevision(GetBoardRevisionRequest) returns (GetBoardRevisionReply);
+  rpc GetState(GetStateRequest) returns (GetStateReply);
+  rpc Reset(ResetRequest) returns (ResetReply);
+
+  rpc SetLed(SetLedRequest) returns (SetLedReply);
+  rpc GetLed(GetLedRequest) returns (GetLedReply);
+  rpc ReadBoardTemperature(ReadBoardTemperatureRequest) returns (ReadBoardTemperatureReply);
+
+  rpc EnableTDR(EnableTDRRequest) returns (EnableTDRReply);
+  rpc GetTDRWorkingState(GetTDRWorkingStateRequest) returns (GetTDRWorkingStateReply);
+  rpc ConfigureTDRPreset(ConfigureTDRPresetRequest) returns (ConfigureTDRPresetReply);
+  rpc GetTDRConfiguration(GetTDRConfigurationRequest) returns (GetTDRConfigurationReply);
+
+  rpc ListenToStateEvent(ListenToStateEventRequest) returns (stream StateEvent);  // Returns an open-ended stream.
+  rpc ListenToSampleStream(ListenToSampleStreamRequest) returns (stream SampleStream);  // Returns an open-ended stream.
+  rpc ListenToLedState(ListenToLedStateRequest) returns (stream LedState);  // Returns an open-ended stream.
+}
+
+message IsReadyRequest {
+}
+
+message IsReadyReply {
+}
+
+message IsEmulatedRequest {
+}
+
+message IsEmulatedReply {
+  bool emulated = 1;
+}
+
+message GetBoardRevisionRequest {
+}
+
+message GetBoardRevisionReply {
+  string revision = 1;
+}
+
+message GetStateRequest {
+}
+
+message GetStateReply {
+  bool acquisition_enabled = 1;
+  bool acquiring = 2;
+  optional bool acquisition_stalled = 3;
+  optional TDRPulsePeriod pulse_period = 4;
+  optional double pulse_period_ns = 5;
+  optional double sample_spacing_ps = 6;
+  optional TDRConfigurationPreset configuration_preset = 7;
+  optional double offset_v = 8;
+}
+
+message ResetRequest {
+}
+
+message ResetReply {
+}
+
+message SetLedRequest {
+  LedId led_id = 1;
+  oneof led_state {
+    bool set = 2;
+    uint32 brightness = 3;  // Max brightness is 255, 0 is turned all the way off.
+    bool breathe = 4;
+  }
+}
+
+message SetLedReply {
+}
+
+message GetLedRequest {
+  LedId led_id = 1;
+}
+
+message GetLedReply {
+  LedState led_state = 1;
+}
+
+message LedState {
+  LedId led_id = 1;
+  uint32 brightness = 2;  // Max brightness is 255, 0 is turned all the way off.
+  bool breathe = 3;
+}
+
+message ReadBoardTemperatureRequest {
+}
+
+message ReadBoardTemperatureReply {
+  double temperature = 1;
+}
+
+message EnableTDRRequest {
+  bool enable = 1;
+}
+
+message EnableTDRReply {
+}
+
+message GetTDRWorkingStateRequest {
+}
+
+message GetTDRWorkingStateReply {
+  bool acquisition_enabled = 1;
+  bool acquiring = 2;
+  optional bool acquisition_stalled = 3;
+}
+
+message ConfigureTDRPresetRequest {
+  TDRConfigurationPreset preset = 1;
+}
+
+message ConfigureTDRPresetReply {
+}
+
+message GetTDRConfigurationRequest {
+}
+
+message GetTDRConfigurationReply {
+  TDRPulsePeriod pulse_period = 1;
+  double pulse_period_ns = 2;
+  double sample_spacing_ps = 3;
+}
+
+message ListenToStateEventRequest {
+}
+
+message StateEvent {
+  StateEventType state_event_type = 1;
+  optional string trigger_req_id = 2;  // Note, this will be filled with the value corresponding to the metadata key "req_id" if it existed in the triggering request.
+}
+
+message ListenToSampleStreamRequest {
+}
+
+message SampleStream {
+  repeated float sample = 1;
+  double sample_spacing_ps = 2;
+  double pulse_period_ns = 3;
+  double ref_50ohm = 4;
+  double ref_unit_amp = 5;
+}
+
+message ListenToLedStateRequest {
+  bool led_id_red = 1;
+  bool led_id_green = 2;
+  bool led_id_blue = 3;
+}
+
+enum LocalErrorCode {
+  LOCAL_ERROR_CODE_UNSPECIFIED = 0;
+  LOCAL_ERROR_CODE_NOT_SUPPORTED = 103;
+  LOCAL_ERROR_CODE_ACQUISITION_PROBLEM = 104;
+  LOCAL_ERROR_CODE_INVALID_CALIBRATION_DATA = 108;
+  LOCAL_ERROR_CODE_INVALID_CONFIGURATION = 110;
+}
+
+enum MinMaxConstant {
+  // Enums are represented as int and can only store integers, in addition, in some languages such as c++, the largest number 
+  // which can be stored for an enum is 2147483647. As a workaround use Kilo, Mega and Giga where needed.
+  option allow_alias = true;
+  MIN_MAX_CONSTANT_UNSPECIFIED = 0;
+  MIN_MAX_CONSTANT_MIN_DC_OFFSET_VOLTS = 0;
+  MIN_MAX_CONSTANT_MAX_DC_OFFSET_VOLTS = 3;
+}
+
+enum StateEventType {
+  STATE_EVENT_TYPE_UNSPECIFIED = 0;
+}
+
+enum TDRPulsePeriod {
+  TDR_PULSE_PERIOD_UNSPECIFIED = 0;
+  TDR_PULSE_PERIOD_3P2_NS = 1;
+  TDR_PULSE_PERIOD_6P4_NS = 2;
+  TDR_PULSE_PERIOD_12P8_NS = 3;
+  TDR_PULSE_PERIOD_16P0_NS = 4;
+  TDR_PULSE_PERIOD_32P0_NS = 5;
+  TDR_PULSE_PERIOD_64P0_NS = 6;
+  TDR_PULSE_PERIOD_80P0_NS = 7;
+  TDR_PULSE_PERIOD_128P0_NS = 8;
+  TDR_PULSE_PERIOD_160P0_NS = 9;
+}
+
+enum TDRConfigurationPreset {
+  TDR_CONFIGURATION_PRESET_UNSPECIFIED = 0;
+  TDR_CONFIGURATION_PRESET_PULSE_PERIOD_3P2_NS_SAMPLE_SPACING_0P2_PS = 1;
+  TDR_CONFIGURATION_PRESET_PULSE_PERIOD_6P4_NS_SAMPLE_SPACING_0P4_PS = 2;
+  TDR_CONFIGURATION_PRESET_PULSE_PERIOD_12P8_NS_SAMPLE_SPACING_0P8_PS = 3;
+  TDR_CONFIGURATION_PRESET_PULSE_PERIOD_16P0_NS_SAMPLE_SPACING_1P0_PS = 4;
+  TDR_CONFIGURATION_PRESET_PULSE_PERIOD_32P0_NS_SAMPLE_SPACING_2P0_PS = 5;
+  TDR_CONFIGURATION_PRESET_PULSE_PERIOD_64P0_NS_SAMPLE_SPACING_4P0_PS = 6;
+  TDR_CONFIGURATION_PRESET_PULSE_PERIOD_80P0_NS_SAMPLE_SPACING_5P0_PS = 7;
+  TDR_CONFIGURATION_PRESET_PULSE_PERIOD_128P0_NS_SAMPLE_SPACING_8P0_PS = 8;
+  TDR_CONFIGURATION_PRESET_PULSE_PERIOD_160P0_NS_SAMPLE_SPACING_10P0_PS = 9;
+  TDR_CONFIGURATION_PRESET_PULSE_PERIOD_16P0_NS_SAMPLE_SPACING_50P0_PS = 10;
+  TDR_CONFIGURATION_PRESET_PULSE_PERIOD_16P0_NS_SAMPLE_SPACING_100P0_PS = 11;
+}
+
+enum LedId {
+  LED_ID_UNSPECIFIED = 0;
+  LED_ID_RED = 1;
+  LED_ID_GREEN = 2;
+  LED_ID_BLUE = 3;
+}

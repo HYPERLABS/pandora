@@ -1,0 +1,62 @@
+syntax = "proto3";
+package nitrogen.v1;
+
+service Nitrogen {
+  rpc IsReady(IsReadyRequest) returns (IsReadyReply);
+  rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesReply);
+  rpc Reset(ResetRequest) returns (ResetReply);
+  rpc GetVersionId(GetVersionIdRequest) returns (GetVersionIdReply);
+  rpc Quit(QuitRequest) returns (QuitReply);
+  rpc LoginManage(LoginManageRequest) returns (LoginManageReply);
+  rpc ListenToHealthMonitorEvent(ListenToHealthMonitorEventRequest) returns (stream HealthMonitorEvent);  // Returns an open-ended stream.
+}
+
+message IsReadyRequest {
+}
+
+message IsReadyReply {
+}
+
+message GetCapabilitiesRequest {
+}
+
+message GetCapabilitiesReply {
+}
+
+message ResetRequest{
+}
+
+message ResetReply {
+}
+
+message GetVersionIdRequest {
+}
+
+message GetVersionIdReply {
+  string id = 1;
+}
+
+message QuitRequest {
+}
+
+message QuitReply {
+}
+
+message LoginManageRequest{
+  LoginManageMethod method = 1;
+}
+
+message LoginManageReply {
+}
+
+enum LoginManageMethod {
+  Login_Manage_Method_Power_Off = 0;
+  Login_Manage_Method_Reboot = 1;
+}
+
+message ListenToHealthMonitorEventRequest {
+}
+
+message HealthMonitorEvent {
+  float cpu_temperature = 1;
+}

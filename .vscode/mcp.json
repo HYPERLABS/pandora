@@ -1,0 +1,12 @@
+{
+	"servers": {
+		"MTDR MCP Server": {
+			"type": "stdio",
+			"command": "${workspaceFolder}/src/mtdr/python/.venv/Scripts/python.exe",
+			//"command": "${workspaceFolder}/src/mtdr/python/.venv/bin/python3",
+			"args": ["${workspaceFolder}/src/mtdr/python/mtdr_mcp.py"]
+		}
+	},
+	"inputs": []
+}
+

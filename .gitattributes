@@ -1,0 +1,3 @@
+# Keep internal publisher tooling out of public exports
+scripts/linux/publish export-ignore
+scripts/linux/publish/** export-ignore
