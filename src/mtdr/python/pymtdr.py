@@ -546,7 +546,7 @@ class AppWindow(QtWidgets.QMainWindow):
         # Horizonal draggable cursors.
         self._hcursor1 = pg.InfiniteLine(angle=0, movable=True, pen=pg.mkPen(color=hcursor1_base_color, width=5))
         self._hcursor2 = pg.InfiniteLine(angle=0, movable=True, pen=pg.mkPen(color=hcursor2_base_color, width=5))
-        self._hcursor1.setValue(0.5)
+        self._hcursor1.setValue(0.71)
         self._hcursor2.setValue(0.6)
         self._hcursor1.sigPositionChanged.connect(self._update_hcursor_readouts)
         self._hcursor2.sigPositionChanged.connect(self._update_hcursor_readouts)
@@ -781,27 +781,66 @@ class AppWindow(QtWidgets.QMainWindow):
                 return (sample_array - ref_50ohm)/ref_unit_amp
             elif out_mode == self._DisplayMode.IMPEDANCE or out_mode == self._DisplayMode.IMPEDANCE_LOG_SCALE:
                 reflection_coeff = (sample_array - ref_50ohm)/ref_unit_amp
-                return 50*(1 + reflection_coeff)/(1 - reflection_coeff)
+                impedance = 50*(1 + reflection_coeff)/(1 - reflection_coeff)
+                if out_mode == self._DisplayMode.IMPEDANCE_LOG_SCALE:
+                    if np.isscalar(impedance):
+                        impedance = impedance.astype(float)
+                        if impedance <= 0: impedance = np.nan
+                    else:
+                        impedance[impedance <= 0] = np.nan
+                    impedance = np.log10(impedance)
+                return impedance
             else:
                 return sample_array
-            
+
         if in_mode == self._DisplayMode.RHO:
             if out_mode == self._DisplayMode.S_N:
                 return sample_array*ref_unit_amp + ref_50ohm
             elif out_mode == self._DisplayMode.IMPEDANCE or out_mode == self._DisplayMode.IMPEDANCE_LOG_SCALE:
                 sample_array_sn = sample_array*ref_unit_amp + ref_50ohm
                 reflection_coeff = (sample_array_sn - ref_50ohm)/ref_unit_amp
-                return 50*(1 + reflection_coeff)/(1 - reflection_coeff)
+                impedance = 50*(1 + reflection_coeff)/(1 - reflection_coeff)
+                if out_mode == self._DisplayMode.IMPEDANCE_LOG_SCALE:
+                    if np.isscalar(impedance):
+                        impedance = impedance.astype(float)
+                        if impedance <= 0: impedance = np.nan
+                    else:
+                        impedance[impedance <= 0] = np.nan
+                    impedance = np.log10(impedance)
+                return impedance
             else:
                 return sample_array
-            
-        if in_mode == self._DisplayMode.IMPEDANCE or in_mode == self._DisplayMode.IMPEDANCE_LOG_SCALE:
+
+        if in_mode == self._DisplayMode.IMPEDANCE:
             if out_mode == self._DisplayMode.S_N:
                 reflection_coeff = (sample_array - 50)/(sample_array + 50)
                 return reflection_coeff*ref_unit_amp + ref_50ohm
             elif out_mode == self._DisplayMode.RHO:
                 reflection_coeff = (sample_array - 50)/(sample_array + 50)
                 return reflection_coeff
+            elif out_mode == self._DisplayMode.IMPEDANCE_LOG_SCALE:
+                impedance = sample_array
+                if np.isscalar(impedance):
+                    impedance = impedance.astype(float)
+                    if impedance <= 0: impedance = np.nan
+                else:
+                    impedance[impedance <= 0] = np.nan
+                impedance = np.log10(impedance)
+                return impedance
+            else:
+                return sample_array
+
+        if in_mode == self._DisplayMode.IMPEDANCE_LOG_SCALE:
+            if out_mode == self._DisplayMode.S_N:
+                sample_array = 10 ** sample_array
+                reflection_coeff = (sample_array - 50)/(sample_array + 50)
+                return reflection_coeff*ref_unit_amp + ref_50ohm
+            elif out_mode == self._DisplayMode.RHO:
+                sample_array = 10 ** sample_array
+                reflection_coeff = (sample_array - 50)/(sample_array + 50)
+                return reflection_coeff
+            elif out_mode == self._DisplayMode.IMPEDANCE:
+                return 10 ** sample_array
             else:
                 return sample_array
 
@@ -922,23 +961,11 @@ class AppWindow(QtWidgets.QMainWindow):
 
         # Run a single scatter update 
         # This is important in order to remove invalid values before setting the log mode.
-        # This is also called by _on_display_select_changed and is critical in order to get the new display mode correctly set.
+        # Since we also get here from _on_display_select_changed a call to _update_scatter_plot() is critical in order to get the new display mode correctly set.
         self._update_scatter_plot()
         
         # Set the axis to use log mode.
         pg.PlotItem.updateLogMode(self._main_plot)
-
-        # Update the horizontal cursors based on the log mode.
-        if _prev_y_axis_is_in_log_mode != self._y_axis_is_in_log_scale:
-            hy1, hy2 = float(self._hcursor1.value()), float(self._hcursor2.value())  # type: ignore
-            if self._y_axis_is_in_log_scale:
-                hy1 = 1 if hy1 <= 0 else hy1
-                hy2 = 1 if hy2 <= 0 else hy2
-                self._hcursor1.setValue(np.log10(hy1))
-                self._hcursor2.setValue(np.log10(hy2))
-            else:
-                self._hcursor1.setValue(10 ** hy1)
-                self._hcursor2.setValue(10 ** hy2)
 
         # Disable auto range to avoid the plot from moving all the time.
         for axis_name in self._axis_map:
@@ -1116,23 +1143,15 @@ class AppWindow(QtWidgets.QMainWindow):
             self._main_plot.setXRange(0, xlim_max, padding=0)
             self._prev_displayed_sample_spacing_ps = sample_spacing_ps
 
-        #  Convert x & y to numpy arrays (convert y as needed) and store for analysis external to the plot.
+        #  Convert x & y to numpy arrays (convert y as needed using the metadata) and store for analysis external to the plot.
         self._last_x_as_array = np.arange(len(self._last_displayed_sample_stream.sample), dtype=np.float64) * sample_spacing_ps
         self._last_y_as_array = np.asarray(self._last_displayed_sample_stream.sample, dtype=np.float64)
-        if display_mode == self._DisplayMode.RHO:
-            self._last_y_as_array = self._convert_y_to(self._last_y_as_array, self._DisplayMode.S_N, display_mode, self._last_displayed_sample_stream.ref_50ohm, self._last_displayed_sample_stream.ref_unit_amp)
-        elif display_mode == self._DisplayMode.IMPEDANCE or display_mode == self._DisplayMode.IMPEDANCE_LOG_SCALE:
-            self._last_y_as_array = self._convert_y_to(self._last_y_as_array, self._DisplayMode.S_N, display_mode, self._last_displayed_sample_stream.ref_50ohm, self._last_displayed_sample_stream.ref_unit_amp)
-        
-        # If y is in log mode, we need to remove invalid values and transform the data manually (see pyqtgraph docs).
-        if self._y_axis_is_in_log_scale:
-            self._last_y_as_array[self._last_y_as_array <= 0] = np.nan
-            self._last_y_as_array = np.log10(self._last_y_as_array)
-        
+        self._last_y_as_array = self._convert_y_to(self._last_y_as_array, self._DisplayMode.S_N, display_mode, self._last_displayed_sample_stream.ref_50ohm, self._last_displayed_sample_stream.ref_unit_amp)
+
         # Update the scatter plot.
         self._scatter.setData(x=self._last_x_as_array, y=self._last_y_as_array, pxMode=True, brush=self._current_brush)
 
-        # Restrict vertical cursor movement to x data range.
+        # Restrict vertical cursor movement to x data range and update the readout.
         if self._last_x_as_array is not None and len(self._last_x_as_array) > 0:
             min_x = 0
             max_x = self._last_x_as_array[-1]
@@ -1142,28 +1161,26 @@ class AppWindow(QtWidgets.QMainWindow):
             elif self._vcursor1.value() > max_x: self._vcursor1.setValue(max_x)
             if self._vcursor2.value() < min_x: self._vcursor2.setValue(min_x)  # type: ignore
             elif self._vcursor2.value() > max_x: self._vcursor2.setValue(max_x)
+        self._update_vcursor_readouts()
 
-        # If the display mode changed apply autorange and update the value of the horizontal cursors.
+        # If the display mode changed apply autorange and update the value of the horizontal cursors using the metadata.
         if self._prev_displayed_mode != display_mode:
             axis_flag = self._axis_map.get("left", pg.ViewBox.XYAxes)
             self._main_plot.enableAutoRange(axis=axis_flag, enable=True)
             self._main_plot.enableAutoRange(axis=axis_flag, enable=False)
             if self._prev_displayed_mode is not None:
                 hcursor1_as_np = np.asarray(self._hcursor1.value(), dtype=np.float64)
-                hcursor1_updated_value = self._convert_y_to(hcursor1_as_np, self._prev_displayed_mode, display_mode, self._last_displayed_sample_stream.ref_50ohm, self._last_displayed_sample_stream.ref_unit_amp)
-                self._hcursor1.setValue(hcursor1_updated_value)
                 hcursor2_as_np = np.asarray(self._hcursor2.value(), dtype=np.float64)
+                hcursor1_updated_value = self._convert_y_to(hcursor1_as_np, self._prev_displayed_mode, display_mode, self._last_displayed_sample_stream.ref_50ohm, self._last_displayed_sample_stream.ref_unit_amp)
                 hcursor2_updated_value = self._convert_y_to(hcursor2_as_np, self._prev_displayed_mode, display_mode, self._last_displayed_sample_stream.ref_50ohm, self._last_displayed_sample_stream.ref_unit_amp)
+                self._hcursor1.setValue(hcursor1_updated_value)
                 self._hcursor2.setValue(hcursor2_updated_value)
+                self._update_hcursor_readouts()
 
         # Update previous displayed state.
         self._prev_displayed_sample_spacing_ps = sample_spacing_ps
         self._prev_displayed_pulse_period_ns = pulse_period_ns
         self._prev_displayed_mode = display_mode
-
-        # Refresh cursor readouts with the new data
-        self._update_hcursor_readouts()
-        self._update_vcursor_readouts()
 
     def _pop_sample_stream_queue(self):
         '''Keep popping sample streams from the queue.'''
@@ -1268,7 +1285,6 @@ class AppWindow(QtWidgets.QMainWindow):
             self._last_y_as_array = arr_y
             self._prev_displayed_pulse_period_ns = None
             self._prev_displayed_sample_spacing_ps = None
-            self._prev_displayed_mode = self._DisplayMode.S_N
             self._update_scatter_plot()
             self._logger.info(f"Imported data from {file_path}")
         except Exception as e:

@@ -48,6 +48,8 @@ for proto_file in "$proto_dir"/*.proto; do
     echo Compiling $proto_file
     python3 -m grpc_tools.protoc -Igenerated=$proto_dir -I"$proto_dir" --python_out="$python_dst_dir" --pyi_out="$python_dst_dir" --grpc_python_out="$python_dst_dir" "$proto_file"
 done
+cd $python_dst_dir/docs
+make html
 echo Completed building
 echo "** To interact with the python getting started notebook run: source $repo_root/scripts/linux/setup/set_env.sh ; mtdr-run-grpc-example-pynb **"
 cd $script_dir

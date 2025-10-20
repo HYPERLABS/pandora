@@ -6,18 +6,18 @@ script_dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # Environment variables.
 repo_root=$(realpath $script_dir/../../..)
-export GREENLAND_ROOT=$repo_root
-export GREENLAND_SCRIPTS=$repo_root/scripts
+export PANDORA.GIT_ROOT=$repo_root
+export PANDORA.GIT_SCRIPTS=$repo_root/scripts
 export VIRTUAL_ENV_DISABLE_PROMPT=1
 
 # Custom commands.
 pulser-activate-venv() {
-    cd $GREENLAND_ROOT/src/pulser/python
+    cd $PANDORA.GIT_ROOT/src/pulser/python
     source .venv/bin/activate
 }
 
 pulser-run-pynb() {
-    cd $GREENLAND_ROOT/src/pulser/python
+    cd $PANDORA.GIT_ROOT/src/pulser/python
     source .venv/bin/activate
     jupyter lab --ip='*' --no-browser --port=9999
     deactivate
@@ -25,12 +25,12 @@ pulser-run-pynb() {
 }
 
 mtdr-activate-venv() {
-    cd $GREENLAND_ROOT/src/mtdr/python
+    cd $PANDORA.GIT_ROOT/src/mtdr/python
     source .venv/bin/activate
 }
 
 mtdr-run-pynb() {
-    cd $GREENLAND_ROOT/src/mtdr/python
+    cd $PANDORA.GIT_ROOT/src/mtdr/python
     source .venv/bin/activate
     jupyter lab --ip='*' --no-browser --port=9999
     deactivate

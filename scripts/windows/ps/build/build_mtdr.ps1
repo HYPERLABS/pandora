@@ -32,7 +32,7 @@ python -m venv .venv
 python -m pip install --upgrade pip
 python -m pip install -r requirements_windows.txt
 
-# Create the output dir.
+# Create a directory for generated files.
 $outputDir = Join-Path $pythonDstDir "generated"
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 
@@ -48,6 +48,9 @@ Get-ChildItem -Path $protoDir -Filter *.proto | ForEach-Object {
         --grpc_python_out="$pythonDstDir" `
         "$protoFile"
 }
+
+# Build documentation.
+& "$pythonDstDir\docs\make.bat" html
 
 Write-Host "Completed building"
 Write-Host "** To interact with the python getting started notebook run: $repoRoot\scripts\windows\run\mtdr-run-grpc-example-pynb.cmd **"

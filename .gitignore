@@ -7,3 +7,4 @@ src/mtdr/python/.venv/
 src/mtdr/python/generated/
 src/mtdr/python/__pycache__/
 src/mtdr/python/.ipynb_checkpoints/
+src/mtdr/python/docs/build/

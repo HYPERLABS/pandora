@@ -31,6 +31,7 @@ for %%f in ("%proto_dir%\*.proto") do (
     echo Compiling %%f
     python -m grpc_tools.protoc -Igenerated="%proto_dir%" -I"%proto_dir%" --python_out="%python_dst_dir%" --pyi_out="%python_dst_dir%" --grpc_python_out="%python_dst_dir%" "%%f"
 )
+"%python_dst_dir%\docs\make.bat" html
 echo Completed building
 echo ** To interact with the python getting started notebook run: %repo_root%\scripts\windows\run\mtdr-run-grpc-example-pynb.cmd **
 cd /d %script_dir%
