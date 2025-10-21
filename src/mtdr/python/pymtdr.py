@@ -191,11 +191,13 @@ class AppWindow(QtWidgets.QMainWindow):
         self._zoom_axis_store = self._zoom_axis
         self._y_axis_is_in_log_scale = False
         self._y_display = self._DisplayValue(self._DisplayMode.S_N, "Sn")
+        self._prev_displayed_mode = None
         self._logger = logger
         self._service_browser_dialog = ServiceBrowserDialog(self, on_connect=self._on_connect, service_type="_workstation._tcp.local.", refresh_ms=1000)
         self._red_led_state = None
         self._last_x_as_array = None
         self._last_y_as_array = None
+        self._importing = False
 
         # Window.
         self.setWindowTitle("PyMTDR")
@@ -374,7 +376,8 @@ class AppWindow(QtWidgets.QMainWindow):
             "Reflection Coefficient": self._DisplayValue(self._DisplayMode.RHO, "Γ")
         }
         self._display_select_combo.addItems(list(self._display_select_map.keys()))
-        self._display_select_combo.setCurrentIndex(list(self._display_select_map).index("Normalized Raw Samples"))
+        init_display_select = "Normalized Raw Samples"
+        self._display_select_combo.setCurrentIndex(list(self._display_select_map).index(init_display_select))
         self._display_select_combo.currentTextChanged.connect(self._on_display_select_changed)
         self._waveform_average_tooltip = {
             "average": "Waveform Averaging",
@@ -416,44 +419,79 @@ class AppWindow(QtWidgets.QMainWindow):
         toolbar.addSeparator()
 
         # Cursors group.
-        cursor_label_min_width = 100
-        self._vcursor_label_widget = QtWidgets.QLabel("Vertical:")
+        cursor_label_max_width = 60
+        cursor_checkbox_max_width = 30
+        cursor_clabel_max_width = 30
+        cursor_ddelta_label_max_width = 40
+        cursor_delta_label_max_width = 60
+        vcursor_xlabel_max_width = 60
+        vcursor_ylabel_max_width = 40
+        hcursor_label_max_width = vcursor_xlabel_max_width + vcursor_ylabel_max_width
+        vcursor_vlabel_widget = QtWidgets.QLabel("Vertical:")
+        vcursor_vlabel_widget.setMaximumWidth(cursor_label_max_width)
         self._show_vcursor1_checkbox = QtWidgets.QCheckBox("")
         self._show_vcursor1_checkbox.setChecked(False)
-        vcursor1_label_widget = QtWidgets.QLabel("C1:")
+        self._show_vcursor1_checkbox.setMaximumWidth(cursor_checkbox_max_width)
         vcursor1_base_color = (255, 80, 255, 200)  # Purple.
-        vcursor1_label_widget.setStyleSheet(f"color: rgba({vcursor1_base_color[0]},{vcursor1_base_color[1]},{vcursor1_base_color[2]},{vcursor1_base_color[3]/255});")
-        self._vcursor1_label = QtWidgets.QLabel("--")
-        self._vcursor1_label.setMinimumWidth(cursor_label_min_width)
+        vcursor1_clabel_widget = QtWidgets.QLabel("C1:")
+        vcursor1_clabel_widget.setStyleSheet(f"color: rgba({vcursor1_base_color[0]},{vcursor1_base_color[1]},{vcursor1_base_color[2]},{vcursor1_base_color[3]/255});")
+        vcursor1_clabel_widget.setMaximumWidth(cursor_clabel_max_width)
+        self._vcursor1_xlabel = QtWidgets.QLineEdit("--")
+        self._vcursor1_xlabel.setMaximumWidth(vcursor_xlabel_max_width)
+        self._vcursor1_xlabel.setValidator(QtGui.QDoubleValidator())
+        self._vcursor1_xlabel.editingFinished.connect(lambda: self._on_vcursor_xlabel_edit(self._vcursor1, self._vcursor1_xlabel))
+        self._vcursor1_ylabel = QtWidgets.QLabel("--")
+        self._vcursor1_ylabel.setMaximumWidth(vcursor_ylabel_max_width)
         self._show_vcursor2_checkbox = QtWidgets.QCheckBox("")
         self._show_vcursor2_checkbox.setChecked(False)
-        vcursor2_label_widget = QtWidgets.QLabel("C2:")
+        self._show_vcursor2_checkbox.setMaximumWidth(cursor_checkbox_max_width)
         vcursor2_base_color = (80, 220, 120, 200)  # Green.
-        vcursor2_label_widget.setStyleSheet(f"color: rgba({vcursor2_base_color[0]},{vcursor2_base_color[1]},{vcursor2_base_color[2]},{vcursor2_base_color[3]/255});")
-        self._vcursor2_label = QtWidgets.QLabel("--")
-        self._vcursor2_label.setMinimumWidth(cursor_label_min_width)
+        vcursor2_clabel_widget = QtWidgets.QLabel("C2:")
+        vcursor2_clabel_widget.setStyleSheet(f"color: rgba({vcursor2_base_color[0]},{vcursor2_base_color[1]},{vcursor2_base_color[2]},{vcursor2_base_color[3]/255});")
+        vcursor2_clabel_widget.setMaximumWidth(cursor_clabel_max_width)
+        self._vcursor2_xlabel = QtWidgets.QLineEdit("--")
+        self._vcursor2_xlabel.setMaximumWidth(vcursor_xlabel_max_width)
+        self._vcursor2_xlabel.setValidator(QtGui.QDoubleValidator())
+        self._vcursor2_xlabel.editingFinished.connect(lambda: self._on_vcursor_xlabel_edit(self._vcursor2, self._vcursor2_xlabel))
+        self._vcursor2_ylabel = QtWidgets.QLabel("--")
+        self._vcursor2_ylabel.setMaximumWidth(vcursor_ylabel_max_width)
+        self._vcursor_ddelta_label = QtWidgets.QLabel("Δx (ps):")
+        self._vcursor_ddelta_label.setMaximumWidth(cursor_ddelta_label_max_width)
         self._vcursor_delta_label = QtWidgets.QLabel("--")
-        self._vcursor_delta_label.setMinimumWidth(cursor_label_min_width)
+        self._vcursor_delta_label.setFixedWidth(cursor_delta_label_max_width)
 
-        self._hcursor_label_widget = QtWidgets.QLabel("Horizontal:")
+        hcursor_hlabel_widget = QtWidgets.QLabel("Horizontal:")
+        hcursor_hlabel_widget.setMaximumWidth(cursor_label_max_width)
         self._show_hcursor1_checkbox = QtWidgets.QCheckBox("")
         self._show_hcursor1_checkbox.setChecked(False)
-        hcursor1_label_widget = QtWidgets.QLabel("C1:")
+        self._show_hcursor1_checkbox.setMaximumWidth(cursor_checkbox_max_width)
         hcursor1_base_color = (225, 190, 25, 200)  # Yellow.
-        hcursor1_label_widget.setStyleSheet(f"color: rgba({hcursor1_base_color[0]},{hcursor1_base_color[1]},{hcursor1_base_color[2]},{hcursor1_base_color[3]/255});")
-        self._hcursor1_label = QtWidgets.QLabel("--")
-        self._hcursor1_label.setMinimumWidth(cursor_label_min_width)
+        hcursor1_clabel_widget = QtWidgets.QLabel("C1:")
+        hcursor1_clabel_widget.setStyleSheet(f"color: rgba({hcursor1_base_color[0]},{hcursor1_base_color[1]},{hcursor1_base_color[2]},{hcursor1_base_color[3]/255});")
+        hcursor1_clabel_widget.setMaximumWidth(cursor_clabel_max_width)
+        self._hcursor1_label = QtWidgets.QLineEdit("--")
+        self._hcursor1_label.setMaximumWidth(hcursor_label_max_width)
+        self._hcursor1_label.setValidator(QtGui.QDoubleValidator())
+        self._hcursor1_label.editingFinished.connect(lambda: self._on_hcursor_label_edit(self._hcursor1, self._hcursor1_label))
         self._show_hcursor2_checkbox = QtWidgets.QCheckBox("")
         self._show_hcursor2_checkbox.setChecked(False)
-        hcursor2_label_widget = QtWidgets.QLabel("C2:")
+        self._show_hcursor2_checkbox.setMaximumWidth(cursor_checkbox_max_width)
         hcursor2_base_color = (86, 60, 13, 200)  # Brown.
-        hcursor2_label_widget.setStyleSheet(f"color: rgba({hcursor2_base_color[0]},{hcursor2_base_color[1]},{hcursor2_base_color[2]},{hcursor2_base_color[3]/255});")
-        self._hcursor2_label = QtWidgets.QLabel("--")
-        self._hcursor2_label.setMinimumWidth(cursor_label_min_width)
+        hcursor2_clabel_widget = QtWidgets.QLabel("C2:")
+        hcursor2_clabel_widget.setStyleSheet(f"color: rgba({hcursor2_base_color[0]},{hcursor2_base_color[1]},{hcursor2_base_color[2]},{hcursor2_base_color[3]/255});")
+        hcursor2_clabel_widget.setMaximumWidth(cursor_clabel_max_width)
+        self._hcursor2_label = QtWidgets.QLineEdit("--")
+        self._hcursor2_label.setMaximumWidth(hcursor_label_max_width)
+        self._hcursor2_label.setValidator(QtGui.QDoubleValidator())
+        self._hcursor2_label.editingFinished.connect(lambda: self._on_hcursor_label_edit(self._hcursor2, self._hcursor2_label))
+        self._hcursor_ddelta_label = QtWidgets.QLabel(f"Δy ({self._display_select_map[init_display_select].label}):")
+        self._hcursor_ddelta_label.setMaximumWidth(cursor_ddelta_label_max_width)
         self._hcursor_delta_label = QtWidgets.QLabel("--")
-        self._hcursor_delta_label.setMinimumWidth(cursor_label_min_width)
+        self._hcursor_delta_label.setFixedWidth(cursor_delta_label_max_width)
 
+        # Create the group and the layouts.
         group_widget = QtWidgets.QWidget()
+        group_widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum, QtWidgets.QSizePolicy.Policy.Maximum)
         group_layout = QtWidgets.QVBoxLayout(group_widget)
         group_layout.addWidget(make_label(text="Cursors", bold=True), alignment=toolbar_group_label_alignment)
         controls_hlayout = QtWidgets.QHBoxLayout()
@@ -466,24 +504,44 @@ class AppWindow(QtWidgets.QMainWindow):
         controls_vlayout6 = QtWidgets.QVBoxLayout()
         controls_vlayout7 = QtWidgets.QVBoxLayout()
         controls_vlayout8 = QtWidgets.QVBoxLayout()
-        controls_vlayout0.addWidget(self._vcursor_label_widget)
-        controls_vlayout0.addWidget(self._hcursor_label_widget)
+
+        # Vertical layouts with two widgets each. The widgets are: text, checkbox and text (C1:).
+        controls_vlayout0.addWidget(vcursor_vlabel_widget)
+        controls_vlayout0.addWidget(hcursor_hlabel_widget)
         controls_vlayout1.addWidget(self._show_vcursor1_checkbox)
         controls_vlayout1.addWidget(self._show_hcursor1_checkbox)
-        controls_vlayout2.addWidget(vcursor1_label_widget)
-        controls_vlayout2.addWidget(hcursor1_label_widget)
-        controls_vlayout3.addWidget(self._vcursor1_label)
+        controls_vlayout2.addWidget(vcursor1_clabel_widget)
+        controls_vlayout2.addWidget(hcursor1_clabel_widget)
+
+        # Vetical layout with a horizontal layout on top (includes two label widgets) and label widget on the bottom.
+        vcursor1_hlayout = QtWidgets.QHBoxLayout()
+        vcursor1_hlayout.addWidget(self._vcursor1_xlabel)
+        vcursor1_hlayout.addWidget(self._vcursor1_ylabel)
+        controls_vlayout3.addLayout(vcursor1_hlayout)
         controls_vlayout3.addWidget(self._hcursor1_label)
+
+        # Vertical layouts with two widgets each. The widgets are: checkbox and text (C2:).
         controls_vlayout4.addWidget(self._show_vcursor2_checkbox)
         controls_vlayout4.addWidget(self._show_hcursor2_checkbox)
-        controls_vlayout5.addWidget(vcursor2_label_widget)
-        controls_vlayout5.addWidget(hcursor2_label_widget)
-        controls_vlayout6.addWidget(self._vcursor2_label)
+        controls_vlayout5.addWidget(vcursor2_clabel_widget)
+        controls_vlayout5.addWidget(hcursor2_clabel_widget)
+
+        # Vetical layout with a horizontal layout on top (includes two label widgets) and label widget on the bottom.
+        vcursor2_hlayout = QtWidgets.QHBoxLayout()
+        vcursor2_hlayout.addWidget(self._vcursor2_xlabel)
+        vcursor2_hlayout.addWidget(self._vcursor2_ylabel)
+        controls_vlayout6.addLayout(vcursor2_hlayout)
         controls_vlayout6.addWidget(self._hcursor2_label)
-        controls_vlayout7.addWidget(QtWidgets.QLabel("Δx:"))
-        controls_vlayout7.addWidget(QtWidgets.QLabel("Δy:"))
+
+        # Vertical layout with two text widgets (Δx: and Δy:).
+        controls_vlayout7.addWidget(self._vcursor_ddelta_label)
+        controls_vlayout7.addWidget(self._hcursor_ddelta_label)
+
+        # Vetical layout with with two label widgets.
         controls_vlayout8.addWidget(self._vcursor_delta_label)
         controls_vlayout8.addWidget(self._hcursor_delta_label)
+
+        # Put everything into a single horizontal layout.
         controls_hlayout.addLayout(controls_vlayout0)
         controls_hlayout.addLayout(controls_vlayout1)
         controls_hlayout.addLayout(controls_vlayout2)
@@ -495,6 +553,17 @@ class AppWindow(QtWidgets.QMainWindow):
         controls_hlayout.addLayout(controls_vlayout8)
         controls_hlayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         group_layout.addLayout(controls_hlayout)
+        toolbar.addWidget(group_widget)
+        toolbar.addSeparator()
+
+        # Measurements group.
+        group_widget = QtWidgets.QWidget()
+        group_widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
+        group_layout = QtWidgets.QVBoxLayout(group_widget)
+        group_layout.addWidget(make_label(text="Measurements", bold=True), alignment=toolbar_group_label_alignment)
+        controls_layout = QtWidgets.QHBoxLayout()
+        controls_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
+        group_layout.addLayout(controls_layout)
         toolbar.addWidget(group_widget)
         toolbar.addSeparator()
 
@@ -955,7 +1024,6 @@ class AppWindow(QtWidgets.QMainWindow):
     def _on_plot_update_y_log_mode(self):
         """Custom plot log mode handler."""
         # Update the label and state.
-        _prev_y_axis_is_in_log_mode = self._y_axis_is_in_log_scale
         self._main_plot.setLabel("left", text=self._y_display.label)
         self._y_axis_is_in_log_scale = self._main_plot.ctrl.logYCheck.isChecked()
 
@@ -1047,40 +1115,78 @@ class AppWindow(QtWidgets.QMainWindow):
             if self._y_axis_is_in_log_scale: return 10 ** float(y0 + t * (y1 - y0))
             else: return float(y0 + t * (y1 - y0))
 
-        # Update the vertical cursors.
+        # Get cursor values.
         vx1, vx2 = float(self._vcursor1.value()), float(self._vcursor2.value())  # type: ignore
+        
+        # Update label for vcursor1.
         if self._vcursor1.isVisible():
             vy1 = y_at_x(vx1)
-            self._vcursor1_label.setText(f"{vx1:.1f}ps, {"--" if vy1 is None else f'{vy1:.2f}'}")
+            self._vcursor1_xlabel.setText(f"{vx1:.1f}")
+            self._vcursor1_ylabel.setText(f"{"--" if vy1 is None else f'{vy1:.2f}'}")
         else:
-            self._vcursor1_label.setText(f"--ps, --")
+            self._vcursor1_xlabel.setText(f"--")
+            self._vcursor1_ylabel.setText(f"--")
+
+        # Update label for vcursor2.
         if self._vcursor2.isVisible():
             vy2 = y_at_x(vx2)
-            self._vcursor2_label.setText(f"{vx2:.1f}ps, {"--" if vy2 is None else f'{vy2:.2f}'}")
+            self._vcursor2_xlabel.setText(f"{vx2:.1f}")
+            self._vcursor2_ylabel.setText(f"{"--" if vy2 is None else f'{vy2:.2f}'}")
         else:
-            self._vcursor2_label.setText(f"--ps, --")
+            self._vcursor2_xlabel.setText(f"--")
+            self._vcursor2_ylabel.setText(f"--")
+
+        # Update delta label.
         if self._vcursor1.isVisible() and self._vcursor2.isVisible():
-            self._vcursor_delta_label.setText(f"{abs(vx2 - vx1):.2f}ps")
+            self._vcursor_delta_label.setText(f"{abs(vx2 - vx1):.2f}")
         else:
-            self._vcursor_delta_label.setText(f"--ps")
+            self._vcursor_delta_label.setText(f"--")
 
     def _update_hcursor_readouts(self):
         """Update the horizontal cursor readouts."""
+        # Get cursor values.
         hy1, hy2 = float(self._hcursor1.value()), float(self._hcursor2.value())  # type: ignore
         if self._y_axis_is_in_log_scale:
             hy1, hy2 = 10 ** hy1, 10 ** hy2
+
+        # Update label for hcursor1.
         if self._hcursor1.isVisible():
             self._hcursor1_label.setText(f"{hy1:.2f}")
         else:
             self._hcursor1_label.setText(f"--")
+
+        # Update label for hcursor1.
         if self._hcursor2.isVisible():
             self._hcursor2_label.setText(f"{hy2:.2f}")
         else:
             self._hcursor2_label.setText(f"--")
+
+        # Update delta label.
+        self._hcursor_ddelta_label.setText(f"Δy ({self._y_display.label}):")
         if self._hcursor1.isVisible() and self._hcursor2.isVisible():
             self._hcursor_delta_label.setText(f"{abs(hy1 - hy2):.2f}")
         else:
             self._hcursor_delta_label.setText(f"--")
+
+    def _on_vcursor_xlabel_edit(self, vcursor: pg.InfiniteLine, label: QtWidgets.QLineEdit):
+        text = label.text()
+        try:
+            value = float(text)
+            vcursor.setValue(value)
+            self._update_vcursor_readouts()
+        except ValueError:
+            pass
+
+    def _on_hcursor_label_edit(self, hcursor: pg.InfiniteLine, label: QtWidgets.QLineEdit):
+        text = label.text()
+        try:
+            value = float(text)
+            if self._y_axis_is_in_log_scale:
+                value = np.log10(value) if value > 0 else 0
+            hcursor.setValue(value)
+            self._update_hcursor_readouts()
+        except ValueError:
+            pass
 
     def _update_based_on_radium_state(self, radium_state: radium_public_pb2.GetStateReply):
         """Handles all UI updates based on a radium state change."""
@@ -1128,7 +1234,9 @@ class AppWindow(QtWidgets.QMainWindow):
 
     def _update_scatter_plot(self):
         """Update the scatter plot title and data from last_display_sample_stream."""
-        if self._last_displayed_sample_stream is None: return
+        if self._last_displayed_sample_stream is None:
+            self._update_hcursor_readouts()
+            return
         sample_spacing_ps = self._last_displayed_sample_stream.sample_spacing_ps
         pulse_period_ns = self._last_displayed_sample_stream.pulse_period_ns
         display_mode = self._y_display.mode
@@ -1164,7 +1272,7 @@ class AppWindow(QtWidgets.QMainWindow):
         self._update_vcursor_readouts()
 
         # If the display mode changed apply autorange and update the value of the horizontal cursors using the metadata.
-        if self._prev_displayed_mode != display_mode:
+        if self._prev_displayed_mode != display_mode or self._importing:
             axis_flag = self._axis_map.get("left", pg.ViewBox.XYAxes)
             self._main_plot.enableAutoRange(axis=axis_flag, enable=True)
             self._main_plot.enableAutoRange(axis=axis_flag, enable=False)
@@ -1285,7 +1393,9 @@ class AppWindow(QtWidgets.QMainWindow):
             self._last_y_as_array = arr_y
             self._prev_displayed_pulse_period_ns = None
             self._prev_displayed_sample_spacing_ps = None
+            self._importing = True
             self._update_scatter_plot()
+            self._importing = False
             self._logger.info(f"Imported data from {file_path}")
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, "Import Error", f"Failed to import CSV: {e}")
