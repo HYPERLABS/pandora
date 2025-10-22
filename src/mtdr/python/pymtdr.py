@@ -166,7 +166,7 @@ class AppWindow(QtWidgets.QMainWindow):
         USE_MIN = 0
         USE_MAX = 1
 
-    _PYMTDR_VERSION = "0.1.0.dev"
+    _PYMTDR_VERSION = "0.1.5"
     _CSV_RECORD_HEADER = "Time[sec],Sn"
     _radium_disconnect_signal = QtCore.pyqtSignal()
     _radium_state_signal = QtCore.pyqtSignal(radium_public_pb2.GetStateReply)
@@ -731,6 +731,8 @@ class AppWindow(QtWidgets.QMainWindow):
             str = f"Connected to {self._host_txt}, device software version is {self._nitrogen_version}"
             self._logger.info(str)
             self._service_browser_btn.setToolTip(str)
+            self._on_clear_display()
+            self._main_plot.setTitle("")
         except:
             self._logger.error(f"Failed connecting to device at {self._host_txt}")
             return self._connected
