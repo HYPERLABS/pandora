@@ -166,6 +166,7 @@ class AppWindow(QtWidgets.QMainWindow):
         USE_MIN = 0
         USE_MAX = 1
 
+    _PYMTDR_VERSION = "0.1.0.dev"
     _CSV_RECORD_HEADER = "Time[sec],Sn"
     _radium_disconnect_signal = QtCore.pyqtSignal()
     _radium_state_signal = QtCore.pyqtSignal(radium_public_pb2.GetStateReply)
@@ -255,7 +256,7 @@ class AppWindow(QtWidgets.QMainWindow):
         toolbar_group_label_alignment = QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter
         self.addToolBar(toolbar)
 
-        # Device group - service browser and identify buttons.
+        # Device group - service browser, identify and about buttons.
         self._service_browser_btn = QtWidgets.QPushButton("✅") if self._connected else QtWidgets.QPushButton("🚫")
         self._service_browser_btn.setFixedWidth(40)
         self._service_browser_btn.clicked.connect(lambda: self._init_connection())
@@ -266,14 +267,23 @@ class AppWindow(QtWidgets.QMainWindow):
         }
         self._identify_device_btn.setFixedWidth(40)
         self._identify_device_btn.clicked.connect(self._on_toggle_radium_led_id)
+        self._about_btn = QtWidgets.QPushButton("❓")
+        self._about_btn_tooltip = {
+            "about": "Software & Device Info"
+        }
+        self._about_btn.setFixedWidth(40)
+        self._about_btn.setToolTip(self._about_btn_tooltip["about"])
+        self._about_btn.clicked.connect(self._on_about_clicked)
         group_widget = QtWidgets.QWidget()
         group_layout = QtWidgets.QVBoxLayout(group_widget)
         group_layout.addWidget(make_label(text="Device", bold=True, tooltip="Device connection and identification"), alignment=toolbar_group_label_alignment)
-        controls_layout = QtWidgets.QHBoxLayout()
-        controls_layout.addWidget(self._service_browser_btn)
-        controls_layout.addWidget(self._identify_device_btn)
-        controls_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
-        group_layout.addLayout(controls_layout)
+        controls_layout1 = QtWidgets.QHBoxLayout()
+        controls_layout1.addWidget(self._service_browser_btn)
+        controls_layout1.addWidget(self._identify_device_btn)
+        controls_layout2 = QtWidgets.QHBoxLayout()
+        controls_layout2.addWidget(self._about_btn)
+        group_layout.addLayout(controls_layout1)
+        group_layout.addLayout(controls_layout2)
         toolbar.addWidget(group_widget)
         toolbar.addSeparator()
 
@@ -606,10 +616,10 @@ class AppWindow(QtWidgets.QMainWindow):
         self._main_plot.addItem(self._vcursor2, ignoreBounds=True)
         self._vcursor1.sigPositionChanged.connect(self._update_vcursor_readouts)
         self._vcursor2.sigPositionChanged.connect(self._update_vcursor_readouts)
-        self._show_vcursor1_checkbox.stateChanged.connect(lambda state: self._toggle_cursor(self._vcursor1, True, state, self._CursorBehaviorWhenClipped.USE_MIN))
-        self._show_vcursor2_checkbox.stateChanged.connect(lambda state: self._toggle_cursor(self._vcursor2, True, state, self._CursorBehaviorWhenClipped.USE_MAX))
-        self._toggle_cursor(self._vcursor1, True, self._show_vcursor1_checkbox.isChecked(), self._CursorBehaviorWhenClipped.USE_MIN)
-        self._toggle_cursor(self._vcursor2, True, self._show_vcursor2_checkbox.isChecked(), self._CursorBehaviorWhenClipped.USE_MAX)
+        self._show_vcursor1_checkbox.stateChanged.connect(lambda state: self._toggle_cursor(self._vcursor1, self._vcursor1_xlabel, True, state, self._CursorBehaviorWhenClipped.USE_MIN))
+        self._show_vcursor2_checkbox.stateChanged.connect(lambda state: self._toggle_cursor(self._vcursor2, self._vcursor2_xlabel, True, state, self._CursorBehaviorWhenClipped.USE_MAX))
+        self._toggle_cursor(self._vcursor1, self._vcursor1_xlabel, True, self._show_vcursor1_checkbox.isChecked(), self._CursorBehaviorWhenClipped.USE_MIN)
+        self._toggle_cursor(self._vcursor2, self._vcursor2_xlabel, True, self._show_vcursor2_checkbox.isChecked(), self._CursorBehaviorWhenClipped.USE_MAX)
         self._update_vcursor_readouts()
 
         # Horizonal draggable cursors.
@@ -619,12 +629,12 @@ class AppWindow(QtWidgets.QMainWindow):
         self._hcursor2.setValue(0.6)
         self._hcursor1.sigPositionChanged.connect(self._update_hcursor_readouts)
         self._hcursor2.sigPositionChanged.connect(self._update_hcursor_readouts)
-        self._show_hcursor1_checkbox.stateChanged.connect(lambda state: self._toggle_cursor(self._hcursor1, False, state, self._CursorBehaviorWhenClipped.USE_MIN))
-        self._show_hcursor2_checkbox.stateChanged.connect(lambda state: self._toggle_cursor(self._hcursor2, False, state, self._CursorBehaviorWhenClipped.USE_MAX))
+        self._show_hcursor1_checkbox.stateChanged.connect(lambda state: self._toggle_cursor(self._hcursor1, self._hcursor1_label, False, state, self._CursorBehaviorWhenClipped.USE_MIN))
+        self._show_hcursor2_checkbox.stateChanged.connect(lambda state: self._toggle_cursor(self._hcursor2, self._hcursor2_label, False, state, self._CursorBehaviorWhenClipped.USE_MAX))
         self._main_plot.addItem(self._hcursor1, ignoreBounds=True)
         self._main_plot.addItem(self._hcursor2, ignoreBounds=True)
-        self._toggle_cursor(self._hcursor1, False, self._show_hcursor1_checkbox.isChecked(), self._CursorBehaviorWhenClipped.USE_MIN)
-        self._toggle_cursor(self._hcursor2, False, self._show_hcursor2_checkbox.isChecked(), self._CursorBehaviorWhenClipped.USE_MAX)
+        self._toggle_cursor(self._hcursor1, self._hcursor1_label, False, self._show_hcursor1_checkbox.isChecked(), self._CursorBehaviorWhenClipped.USE_MIN)
+        self._toggle_cursor(self._hcursor2, self._hcursor2_label, False, self._show_hcursor2_checkbox.isChecked(), self._CursorBehaviorWhenClipped.USE_MAX)
         self._update_hcursor_readouts()
 
         # Trigger refresh rate update at a fixed interval.
@@ -671,6 +681,9 @@ class AppWindow(QtWidgets.QMainWindow):
         # If recording is in process _on_record_state_change() will end it.
         self._ui_on_disconnected()
         self._connected = False
+        self._host_txt = ""
+        self._nitrogen_version = ""
+        self._radium_emulated = False
         self._paused = False
         self._buffered_sample_stream = None
         self._sample_stream_queue = queue.Queue(maxsize=10)
@@ -688,28 +701,34 @@ class AppWindow(QtWidgets.QMainWindow):
         self._ip = ip
         self._nitrogen_stub = NitrogenStub(grpc.insecure_channel(f"{self._ip}:50051"))
         self._radium_stub = RadiumStub(grpc.insecure_channel(f"{self._ip}:50052"))
-        if host_name: self._host_txt = host_name + f" - {self._ip}"
+        if host_name: self._host_txt = host_name + f" ({self._ip})"
         else: self._host_txt = self._ip
         try:
             self._nitrogen_stub.IsReady(nitrogen_public_pb2.IsReadyRequest(), timeout=0.5)
-            version = self._nitrogen_stub.GetVersionId(nitrogen_public_pb2.GetVersionIdRequest())
-            version_parts = version.id.split('.')
-            version_dict = {
-                "major": version_parts[0] if len(version_parts) > 0 else "",
-                "minor": version_parts[1] if len(version_parts) > 1 else "",
-                "patch": version_parts[2] if len(version_parts) > 2 else "",
-                "reserved": version_parts[3] if len(version_parts) > 3 else ""
+            nitrogen_version = self._nitrogen_stub.GetVersionId(nitrogen_public_pb2.GetVersionIdRequest())
+            self._nitrogen_version = nitrogen_version.id
+            nitrogen_version_parts = self._nitrogen_version.split('.')
+            nitrogen_version_dict = {
+                "major": nitrogen_version_parts[0] if len(nitrogen_version_parts) > 0 else "",
+                "minor": nitrogen_version_parts[1] if len(nitrogen_version_parts) > 1 else "",
+                "patch": nitrogen_version_parts[2] if len(nitrogen_version_parts) > 2 else "",
+                "reserved": nitrogen_version_parts[3] if len(nitrogen_version_parts) > 3 else ""
             }
-            if version_dict["major"] != "0" and version_dict["reserved"] != "dev":
-                self._logger.error(f"Device version is {version.id}, only versions with major == 0 are supported")
+            if nitrogen_version_dict["major"] != "0" and nitrogen_version_dict["reserved"] != "dev":
+                self._logger.error(f"Device version is {self._nitrogen_version}, only versions with major == 0 are supported")
                 raise ValueError("Device version mismatch")
             self._radium_stub.IsReady(radium_public_pb2.IsReadyRequest(), timeout=0.5)
+            radium_emulated = self._radium_stub.IsEmulated(radium_public_pb2.IsEmulatedRequest())
+            self._radium_emulated = radium_emulated.emulated
+            if not self._radium_emulated:
+                radium_board_revision = self._radium_stub.GetBoardRevision(radium_public_pb2.GetBoardRevisionRequest())
+                self._radium_board_revision = radium_board_revision.revision
             self._radium_state_event_listener_it = self._radium_stub.ListenToStateEvent(radium_public_pb2.ListenToStateEventRequest())
             self._sample_stream_listener_it = self._radium_stub.ListenToSampleStream(radium_public_pb2.ListenToSampleStreamRequest())
             self._radium_led_id_state_listener_it = self._radium_stub.ListenToLedState(radium_public_pb2.ListenToLedStateRequest(led_id_red=True, led_id_green=False, led_id_blue=False))
             self._connected = True
             self._service_browser_btn.setText("✅")
-            str = f"Connected to {self._host_txt}, device software version is {version.id}"
+            str = f"Connected to {self._host_txt}, device software version is {self._nitrogen_version}"
             self._logger.info(str)
             self._service_browser_btn.setToolTip(str)
         except:
@@ -949,6 +968,19 @@ class AppWindow(QtWidgets.QMainWindow):
         self._update_vcursor_readouts()
         self._radium_sample_stream_lock.release_lock()
 
+    def _on_about_clicked(self):
+        """Show a modal dialog with software & device information."""
+        msg = f"<b>PyMTDR version:</b> {self._PYMTDR_VERSION}"
+        if self._connected:
+            msg += f"<br><b>Device address:</b> {self._host_txt}"
+            msg += f"<br><b>Device software version:</b> {self._nitrogen_version}"
+            msg += f"<br><b>Hardware board revision:</b> {"emulated" if self._radium_emulated else self._radium_board_revision}"
+        box = QtWidgets.QMessageBox(self)
+        box.setWindowTitle("About")
+        box.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        box.setText(msg)
+        box.exec()
+
     def _on_start_stop_clicked(self):
         """Start\\stop acquisition button logic."""
         if not self._connected or self._radium_state is None: return
@@ -1056,12 +1088,15 @@ class AppWindow(QtWidgets.QMainWindow):
         self._main_plot.enableAutoRange(axis=axis_flag, enable=True)
         self._main_plot.enableAutoRange(axis=axis_flag, enable=False)
 
-    def _toggle_cursor(self, cursor: pg.InfiniteLine, vertical: bool, state: bool, when_clipped: _CursorBehaviorWhenClipped):
+    def _toggle_cursor(self, cursor: pg.InfiniteLine, label: QtWidgets.QLineEdit, vertical: bool, state: bool, when_clipped: _CursorBehaviorWhenClipped):
         """Toggle a given cursor on/off"""
         if state:
             cursor.setVisible(True)
+            label.setEnabled(True)
         else:
             cursor.setVisible(False)
+            label.setEnabled(False)
+
         if vertical:
             if state and self._last_x_as_array is not None:
                 min_x = np.min(self._last_x_as_array)
@@ -1100,7 +1135,7 @@ class AppWindow(QtWidgets.QMainWindow):
         if self._show_hcursor1_checkbox.isChecked(): self._hcursor1.setValue(point.y())
         if self._show_hcursor2_checkbox.isChecked(): self._hcursor2.setValue(point.y())
 
-    def _update_vcursor_readouts(self):
+    def _update_vcursor_readouts(self, y_only: bool = False):
         """Update the vertical cursor readouts."""
         def y_at_x(xq: float):
             '''Helper to get the waveform y value at a give x value'''
@@ -1120,20 +1155,20 @@ class AppWindow(QtWidgets.QMainWindow):
         
         # Update label for vcursor1.
         if self._vcursor1.isVisible():
+            if not y_only: self._vcursor1_xlabel.setText(f"{vx1:.1f}")
             vy1 = y_at_x(vx1)
-            self._vcursor1_xlabel.setText(f"{vx1:.1f}")
             self._vcursor1_ylabel.setText(f"{"--" if vy1 is None else f'{vy1:.2f}'}")
         else:
-            self._vcursor1_xlabel.setText(f"--")
+            if not y_only: self._vcursor1_xlabel.setText(f"--")
             self._vcursor1_ylabel.setText(f"--")
 
         # Update label for vcursor2.
         if self._vcursor2.isVisible():
+            if not y_only: self._vcursor2_xlabel.setText(f"{vx2:.1f}")
             vy2 = y_at_x(vx2)
-            self._vcursor2_xlabel.setText(f"{vx2:.1f}")
             self._vcursor2_ylabel.setText(f"{"--" if vy2 is None else f'{vy2:.2f}'}")
         else:
-            self._vcursor2_xlabel.setText(f"--")
+            if not y_only: self._vcursor2_xlabel.setText(f"--")
             self._vcursor2_ylabel.setText(f"--")
 
         # Update delta label.
@@ -1259,17 +1294,13 @@ class AppWindow(QtWidgets.QMainWindow):
         # Update the scatter plot.
         self._scatter.setData(x=self._last_x_as_array, y=self._last_y_as_array, pxMode=True, brush=self._current_brush)
 
-        # Restrict vertical cursor movement to x data range and update the readout.
+        # Restrict vertical cursor movement to x data range and update the y readout.
         if self._last_x_as_array is not None and len(self._last_x_as_array) > 0:
             min_x = 0
             max_x = self._last_x_as_array[-1]
             self._vcursor1.setBounds([min_x, max_x])
             self._vcursor2.setBounds([min_x, max_x])
-            if self._vcursor1.value() < min_x: self._vcursor1.setValue(min_x)  # type: ignore
-            elif self._vcursor1.value() > max_x: self._vcursor1.setValue(max_x)
-            if self._vcursor2.value() < min_x: self._vcursor2.setValue(min_x)  # type: ignore
-            elif self._vcursor2.value() > max_x: self._vcursor2.setValue(max_x)
-        self._update_vcursor_readouts()
+        self._update_vcursor_readouts(True)
 
         # If the display mode changed apply autorange and update the value of the horizontal cursors using the metadata.
         if self._prev_displayed_mode != display_mode or self._importing:
